@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createReceipt, uploadReceipt } from "@/lib/api/receipts";
+import { createReceipt, ocrReceipt, uploadReceipt } from "@/lib/api/receipts";
 import type { Category } from "@/types/category";
 import CategorySelect from "@/components/CategorySelect";
 
@@ -16,6 +16,38 @@ export default function ReceiptForm({ categories }: { categories: Category[] }) 
   const [image, setImage] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrInfo, setOcrInfo] = useState<string | null>(null);
+
+  async function handleImageChange(file: File | null) {
+    setImage(file);
+    setOcrInfo(null);
+    if (!file) return;
+    setOcrLoading(true);
+    setError(null);
+    try {
+      const preview = await ocrReceipt(file);
+      if (preview.merchant) setMerchant(preview.merchant);
+      if (preview.total) setTotal(preview.total);
+      if (preview.paid_at) setPaidAt(preview.paid_at);
+      const filled = [
+        preview.merchant && "가맹점",
+        preview.total && "금액",
+        preview.paid_at && "결제일",
+      ].filter(Boolean);
+      if (filled.length === 0) {
+        setOcrInfo("OCR이 인식하지 못했습니다. 직접 입력해주세요.");
+      } else {
+        const conf =
+          preview.confidence !== null ? ` (신뢰도 ${Math.round(preview.confidence * 100)}%)` : "";
+        setOcrInfo(`자동 인식: ${filled.join(", ")}${conf}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? `OCR 실패: ${err.message}` : "OCR에 실패했습니다.");
+    } finally {
+      setOcrLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,13 +116,15 @@ export default function ReceiptForm({ categories }: { categories: Category[] }) 
           className="w-full rounded border border-slate-300 px-3 py-2"
         />
       </Field>
-      <Field label="영수증 이미지 (선택)">
+      <Field label="영수증 이미지 (선택, 업로드 시 자동 인식)">
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
           className="text-sm"
         />
+        {ocrLoading && <p className="mt-1 text-xs text-slate-500">영수증 인식 중...</p>}
+        {ocrInfo && !ocrLoading && <p className="mt-1 text-xs text-emerald-600">{ocrInfo}</p>}
       </Field>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

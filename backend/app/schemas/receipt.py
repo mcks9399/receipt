@@ -31,3 +31,10 @@ class ReceiptRead(ReceiptBase):
     image_path: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class ReceiptOCRPreview(BaseModel):
+    merchant: str | None = None
+    total: Decimal | None = None
+    paid_at: date | None = None
+    confidence: float | None = None

@@ -1,5 +1,5 @@
 import { apiDelete, apiForm, apiGet, apiJson } from "@/lib/api/client";
-import type { Receipt, ReceiptInput } from "@/types/receipt";
+import type { Receipt, ReceiptInput, ReceiptOCRPreview } from "@/types/receipt";
 
 export function listReceipts(params?: {
   year?: number;
@@ -33,6 +33,12 @@ export function uploadReceipt(payload: ReceiptInput, image: File): Promise<Recei
   }
   form.append("image", image);
   return apiForm<Receipt>("POST", "/receipts/upload", form);
+}
+
+export function ocrReceipt(image: File): Promise<ReceiptOCRPreview> {
+  const form = new FormData();
+  form.append("image", image);
+  return apiForm<ReceiptOCRPreview>("POST", "/receipts/ocr", form);
 }
 
 export function updateReceipt(id: number, payload: Partial<ReceiptInput>): Promise<Receipt> {

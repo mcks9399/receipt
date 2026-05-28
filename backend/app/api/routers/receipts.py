@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.models.receipt import Receipt
-from app.schemas.receipt import ReceiptCreate, ReceiptRead, ReceiptUpdate
+from app.schemas.receipt import ReceiptCreate, ReceiptOCRPreview, ReceiptRead, ReceiptUpdate
 from app.services import receipt_service
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
@@ -34,6 +34,18 @@ def get_receipt(receipt_id: int, db: Session = Depends(get_db)) -> Receipt:
 @router.post("", response_model=ReceiptRead, status_code=status.HTTP_201_CREATED)
 def create_receipt(payload: ReceiptCreate, db: Session = Depends(get_db)) -> Receipt:
     return receipt_service.create_receipt(db, payload)
+
+
+@router.post("/ocr", response_model=ReceiptOCRPreview)
+async def ocr_receipt(image: UploadFile = File(...)) -> ReceiptOCRPreview:
+    result = await receipt_service.extract_from_image(image)
+    paid_at = result.paid_at.date() if result.paid_at is not None else None
+    return ReceiptOCRPreview(
+        merchant=result.merchant,
+        total=result.total,
+        paid_at=paid_at,
+        confidence=result.confidence,
+    )
 
 
 @router.post("/upload", response_model=ReceiptRead, status_code=status.HTTP_201_CREATED)

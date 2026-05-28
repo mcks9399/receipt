@@ -1,3 +1,5 @@
+import logging
+import tempfile
 import uuid
 from datetime import date
 from pathlib import Path
@@ -8,8 +10,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.receipt import Receipt
+from app.ocr.base import OCRResult
 from app.ocr.factory import get_ocr_provider
 from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
@@ -61,13 +66,34 @@ async def create_receipt_with_image(
         raise HTTPException(status_code=413, detail="File too large")
     stored_path.write_bytes(contents)
 
-    get_ocr_provider().extract(stored_path)
-
     receipt = Receipt(**payload.model_dump(), image_path=str(stored_path))
     db.add(receipt)
     db.commit()
     db.refresh(receipt)
     return receipt
+
+
+async def extract_from_image(image: UploadFile) -> OCRResult:
+    if image.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported image type: {image.content_type}")
+
+    contents = await image.read()
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    if len(contents) > max_bytes:
+        raise HTTPException(status_code=413, detail="File too large")
+
+    suffix = Path(image.filename or "").suffix or ".bin"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(contents)
+        tmp_path = Path(tmp.name)
+
+    try:
+        return get_ocr_provider().extract(tmp_path)
+    finally:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            logger.warning("Failed to remove temp OCR file: %s", tmp_path)
 
 
 def update_receipt(db: Session, receipt: Receipt, payload: ReceiptUpdate) -> Receipt:

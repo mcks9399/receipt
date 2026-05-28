@@ -17,3 +17,10 @@ export type ReceiptInput = {
   memo: string | null;
   category_id: number | null;
 };
+
+export type ReceiptOCRPreview = {
+  merchant: string | null;
+  total: string | null;
+  paid_at: string | null;
+  confidence: number | null;
+};

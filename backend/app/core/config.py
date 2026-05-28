@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     upload_dir: str = "./storage/receipts"
     max_upload_size_mb: int = 10
     ocr_provider: str = "null"
+    upstage_api_key: str | None = None
+    upstage_api_base: str = "https://api.upstage.ai/v1"
+    upstage_ocr_model: str = "information-extract"
+    upstage_timeout_seconds: float = 60.0
     app_env: str = "development"
     log_level: str = "INFO"
 
