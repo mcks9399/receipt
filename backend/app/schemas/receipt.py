@@ -1,7 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
+from pathlib import PurePath
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+from app.schemas.category import CategoryRead
 
 
 class ReceiptBase(BaseModel):
@@ -29,8 +32,16 @@ class ReceiptRead(ReceiptBase):
 
     id: int
     image_path: str | None
+    category: CategoryRead | None = None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def image_url(self) -> str | None:
+        if not self.image_path:
+            return None
+        return f"/uploads/{PurePath(self.image_path).name}"
 
 
 class ReceiptOCRPreview(BaseModel):

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
 from app.models.receipt import Receipt
@@ -26,7 +26,11 @@ def list_receipts(
     month: int | None = None,
     category_id: int | None = None,
 ) -> list[Receipt]:
-    stmt = select(Receipt).order_by(Receipt.paid_at.desc(), Receipt.id.desc())
+    stmt = (
+        select(Receipt)
+        .options(joinedload(Receipt.category))
+        .order_by(Receipt.paid_at.desc(), Receipt.id.desc())
+    )
     if year is not None:
         start = date(year, 1, 1)
         end = date(year + 1, 1, 1)
