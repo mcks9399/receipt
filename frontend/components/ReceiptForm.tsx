@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { createReceipt, ocrReceipt, uploadReceipt } from "@/lib/api/receipts";
 import type { Category } from "@/types/category";
 import CategorySelect from "@/components/CategorySelect";
@@ -14,10 +14,21 @@ export default function ReceiptForm({ categories }: { categories: Category[] }) 
   const [memo, setMemo] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrInfo, setOcrInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!image) {
+      setImagePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(image);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [image]);
 
   async function handleImageChange(file: File | null) {
     setImage(file);
@@ -76,7 +87,11 @@ export default function ReceiptForm({ categories }: { categories: Category[] }) 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded border border-slate-200 bg-white p-6">
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-6 md:grid-cols-[1fr_280px]"
+    >
+      <div className="space-y-4 rounded border border-slate-200 bg-white p-6">
       <Field label="가맹점">
         <input
           required
@@ -116,26 +131,39 @@ export default function ReceiptForm({ categories }: { categories: Category[] }) 
           className="w-full rounded border border-slate-300 px-3 py-2"
         />
       </Field>
-      <Field label="영수증 이미지 (선택, 업로드 시 자동 인식)">
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
-          className="text-sm"
-        />
-        {ocrLoading && <p className="mt-1 text-xs text-slate-500">영수증 인식 중...</p>}
-        {ocrInfo && !ocrLoading && <p className="mt-1 text-xs text-emerald-600">{ocrInfo}</p>}
-      </Field>
-
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-      >
-        {submitting ? "등록 중..." : "등록"}
-      </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {submitting ? "등록 중..." : "등록"}
+        </button>
+      </div>
+
+      <aside className="space-y-3 rounded border border-slate-200 bg-white p-4">
+        <div className="text-sm font-medium text-slate-700">영수증 이미지 (선택)</div>
+        <label className="block cursor-pointer rounded border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-500 hover:bg-slate-100">
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+            className="hidden"
+          />
+          {image ? image.name : "이미지를 선택하면 자동 인식됩니다"}
+        </label>
+        {imagePreview && (
+          <div className="overflow-hidden rounded border border-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagePreview} alt="미리보기" className="h-auto w-full object-contain" />
+          </div>
+        )}
+        {ocrLoading && <p className="text-xs text-slate-500">영수증 인식 중...</p>}
+        {ocrInfo && !ocrLoading && (
+          <p className="text-xs text-emerald-600">{ocrInfo}</p>
+        )}
+      </aside>
     </form>
   );
 }

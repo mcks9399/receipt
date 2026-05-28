@@ -35,6 +35,9 @@ backend/storage/receipts/*
 .DS_Store
 Thumbs.db
 
+# Claude Code local state
+.claude/
+
 # Logs
 *.log
 npm-debug.log*

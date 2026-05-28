@@ -1,3 +1,5 @@
+import type { Category } from "@/types/category";
+
 export type Receipt = {
   id: number;
   merchant: string;
@@ -5,7 +7,9 @@ export type Receipt = {
   paid_at: string;
   memo: string | null;
   image_path: string | null;
+  image_url: string | null;
   category_id: number | null;
+  category: Category | null;
   created_at: string;
   updated_at: string;
 };
